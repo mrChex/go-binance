@@ -3,6 +3,7 @@ package binance
 import (
 	"context"
 	"encoding/json"
+	"errors"
 )
 
 // CreateOrderService create order
@@ -17,6 +18,7 @@ type CreateOrderService struct {
 	newClientOrderID *string
 	stopPrice        *string
 	icebergQuantity  *string
+	newOrderRespType *string
 }
 
 // Symbol set symbol
@@ -73,6 +75,15 @@ func (s *CreateOrderService) IcebergQuantity(icebergQuantity string) *CreateOrde
 	return s
 }
 
+// NewOrderRespType set newOrderRespType
+func (s *CreateOrderService) NewOrderRespType(newOrderRespType string) *CreateOrderService {
+	if newOrderRespType != "ACK" && newOrderRespType != "RESULT" && newOrderRespType != "FULL" {
+		panic(errors.New("newOrderRespType wrong value. Can be ACK, RESULT or FULL"))
+	}
+	s.newOrderRespType = &newOrderRespType
+	return s
+}
+
 func (s *CreateOrderService) createOrder(ctx context.Context, endpoint string, opts ...RequestOption) (data []byte, err error) {
 	r := &request{
 		method:   "POST",
@@ -99,6 +110,9 @@ func (s *CreateOrderService) createOrder(ctx context.Context, endpoint string, o
 	}
 	if s.icebergQuantity != nil {
 		m["icebergQty"] = *s.icebergQuantity
+	}
+	if s.newOrderRespType != nil {
+		m["newOrderRespType"] = *s.newOrderRespType
 	}
 	r.setFormParams(m)
 	data, err = s.c.callAPI(ctx, r, opts...)
@@ -130,17 +144,26 @@ func (s *CreateOrderService) Test(ctx context.Context, opts ...RequestOption) (e
 
 // CreateOrderResponse define create order response
 type CreateOrderResponse struct {
-	Symbol           string `json:"symbol"`
-	OrderID          int64  `json:"orderId"`
-	ClientOrderID    string `json:"clientOrderId"`
-	TransactTime     int64  `json:"transactTime"`
-	Price            string `json:"price"`
-	OrigQuantity     string `json:"origQty"`
-	ExecutedQuantity string `json:"executedQty"`
-	Status           string `json:"status"`
-	TimeInForce      string `json:"timeInForce"`
-	Type             string `json:"type"`
-	Side             string `json:"side"`
+	Symbol           string                    `json:"symbol"`
+	OrderID          int64                     `json:"orderId"`
+	ClientOrderID    string                    `json:"clientOrderId"`
+	TransactTime     int64                     `json:"transactTime"`
+	Price            string                    `json:"price"`
+	OrigQuantity     string                    `json:"origQty"`
+	ExecutedQuantity string                    `json:"executedQty"`
+	Status           string                    `json:"status"`
+	TimeInForce      string                    `json:"timeInForce"`
+	Type             string                    `json:"type"`
+	Side             string                    `json:"side"`
+	Fills            []CreateOrderResponseFill `json:"fills"`
+}
+
+// CreateOrderResponseFill represent fill field in CreateOrderResponse
+type CreateOrderResponseFill struct {
+	Price           string `json:"price"`
+	Quantity        string `json:"qty"`
+	Commission      string `json:"commission"`
+	CommissionAsset string `json:"commissionAsset"`
 }
 
 // ListOpenOrdersService list opened orders
